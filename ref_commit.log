@@ -1,0 +1,13 @@
+l-nq	https://github.com/nimams/sdk-sidewalk.git (fetch)
+l-nq	https://github.com/nimams/sdk-sidewalk.git (push)
+ncs	https://github.com/nrfconnect/sdk-sidewalk (fetch)
+ncs	https://github.com/nrfconnect/sdk-sidewalk (push)
+commit 9a2e912e703625f11b73889678bfdf1792f3c266
+Author: Sidewalk Team <sidewalk@nordicsemi.no>
+Date:   Sun Oct 15 01:29:41 2023 +0000
+
+    NRF: upmerge
+    
+    update nrf revision in internal_west.yml
+    
+    Signed-off-by: Sidewalk Team <sidewalk@nordicsemi.no>
