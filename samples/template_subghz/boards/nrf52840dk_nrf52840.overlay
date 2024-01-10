@@ -57,6 +57,18 @@ sid_semtech: &spi2 {
 			gpios = <&gpio1 0x6 GPIO_ACTIVE_HIGH>;
 			label = "semtech_sx1262 DIO1";
 		};
+		radio_led_tx: led_tx {
+			gpios = <&gpio0 0x1e GPIO_ACTIVE_HIGH>;
+			label = "red tx LED";
+		};
+		radio_led_rx: led_rx {
+			gpios = <&gpio0 0x1f GPIO_ACTIVE_HIGH>;
+			label = "green rx LED";
+		};
+        radio_dbgH: out_dbgH {
+            gpios = <&gpio0 0x0 GPIO_ACTIVE_HIGH>; // OK  XL1
+            label = "debug H pin";
+        };
  	};
 
 	chosen {

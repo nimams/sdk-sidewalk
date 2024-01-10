@@ -58,7 +58,7 @@ static void sidewalk_app_entry(void *ctx, void *unused, void *unused2)
 		return;
 	}
 #if defined(CONFIG_SIDEWALK_CLI)
-	CLI_init(application_ctx->handle);
+	CLI_init(application_ctx->handle, &application_ctx->config);
 #endif
 	application_state_connected(&global_state_notifier, false);
 	application_state_working(&global_state_notifier, true);

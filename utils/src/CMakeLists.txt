@@ -24,5 +24,11 @@ if (CONFIG_SIDEWALK_CLI)
     zephyr_include_directories(${ZEPHYR_BASE}/../sidewalk/samples/template/include)
 endif() # CONFIG_SIDEWALK_CLI
 
+if (CONFIG_LR1110_CLI)
+    zephyr_library_sources(lr1110_shell.c)
+    zephyr_include_directories(${ZEPHYR_BASE}/../sidewalk/lib/include/)
+    zephyr_include_directories(${ZEPHYR_BASE}/../sidewalk/samples/template/include)
+endif() # CONFIG_LR1110_CLI
+
 zephyr_library_sources_ifdef(CONFIG_SIDEWALK_DFU_SERVICE_BLE nordic_dfu.c)
 zephyr_library_sources(settings_utils.c)

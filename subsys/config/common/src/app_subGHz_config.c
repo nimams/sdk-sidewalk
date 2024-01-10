@@ -156,6 +156,13 @@ const radio_sx126x_device_config_t *get_radio_cfg(void)
 	radio_sx1262_cfg.gpio_tx_bypass = sid_gpio_utils_get_gpio_number_dt(
 			(struct gpio_dt_spec)GPIO_DT_SPEC_GET_OR(DT_NODELABEL(semtech_sx1262_tx_bypass), gpios, INVALID_DT_GPIO));
 
+#ifdef SX126x /* sx126x built from source */
+	radio_sx1262_cfg.gpio_led_tx = sid_gpio_utils_get_gpio_number_dt(
+			(struct gpio_dt_spec)GPIO_DT_SPEC_GET_OR(DT_NODELABEL(radio_led_tx), gpios, INVALID_DT_GPIO));
+	radio_sx1262_cfg.gpio_led_rx = sid_gpio_utils_get_gpio_number_dt(
+			(struct gpio_dt_spec)GPIO_DT_SPEC_GET_OR(DT_NODELABEL(radio_led_rx), gpios, INVALID_DT_GPIO));
+#endif /* SX126x */
+
 	return &radio_sx1262_cfg;
 }
 

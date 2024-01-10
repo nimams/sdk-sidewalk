@@ -14,7 +14,8 @@
 void CLI_register_message_send();
 void CLI_register_message_not_send();
 void CLI_register_message_received(uint16_t resp_id);
-void CLI_init(struct sid_handle *handler);
+void CLI_init(struct sid_handle *handler, const struct sid_config *config);
 void CLI_register_sid_status(const struct sid_status *status);
+void CLI_set_handle(struct sid_handle *handler);
 
 void sidewalk_button_pressed(uint32_t button_bit);

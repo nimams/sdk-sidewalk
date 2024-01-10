@@ -11,3 +11,4 @@ Date:   Sun Oct 15 01:29:41 2023 +0000
     update nrf revision in internal_west.yml
     
     Signed-off-by: Sidewalk Team <sidewalk@nordicsemi.no>
+nrf-sdk: v-25 1fae141

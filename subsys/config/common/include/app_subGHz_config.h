@@ -16,11 +16,19 @@
 #ifndef APP_900_CONFIG_H
 #define APP_900_CONFIG_H
 
-#include <sx126x_config.h>
+#if defined(LR11xx)
+	#include <lr11xx_config.h>
+#else
+	#include <sx126x_config.h>
+#endif
 #include <sid_pal_mfg_store_ifc.h>
 #include <sid_900_cfg.h>
 
+#ifdef LR11xx
+const radio_lr11xx_device_config_t *get_radio_cfg(void);
+#else
 const radio_sx126x_device_config_t *get_radio_cfg(void);
+#endif
 const sid_pal_mfg_store_region_t *get_mfg_cfg(void);
 const struct sid_sub_ghz_links_config *app_get_sub_ghz_config(void);
 #endif

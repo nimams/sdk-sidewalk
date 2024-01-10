@@ -6,6 +6,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
 #include "zephyr/sys/util.h"
 #include <zephyr/kernel.h>
 #include <zephyr/shell/shell.h>
@@ -70,6 +71,15 @@ struct sid_factory_reset_t factory_reset_work;
 static const struct sid_status *CLI_status = &dummy;
 struct messages_stats sidewalk_messages;
 static struct sid_handle *sidewalk_handle;
+const struct sid_config *sidewalk_config;
+
+void app_event_send_sid_init(void);
+void app_event_send_sleep(void);
+void app_event_send_standby(void);
+
+__weak void app_event_send_sid_init() { }
+__weak void app_event_send_sleep() { }
+__weak void app_event_send_standby() { }
 
 void CLI_register_message_send()
 {
@@ -87,9 +97,15 @@ void CLI_register_message_received(uint16_t resp_id)
 	sidewalk_messages.resp_id = resp_id;
 }
 
-void CLI_init(struct sid_handle *handle)
+void CLI_set_handle(struct sid_handle *handle)
 {
 	sidewalk_handle = handle;
+}
+
+void CLI_init(struct sid_handle *handle, const struct sid_config *config)
+{
+	sidewalk_handle = handle;
+    sidewalk_config = config;
 
 	k_work_queue_init(&sid_api_work_q);
 
@@ -351,58 +367,69 @@ static int cmd_report(const struct shell *shell, size_t argc, char **argv)
 				     "SID_STATE_SECURE_CHANNEL_READY" };
 	const char *state = state_repo[CLI_status->state];
 
-	bool in_line = (argc == 2 && strcmp("--oneline", argv[1]) == 0);
+	if (argc == 2 && strcmp("--oneline", argv[1]) == 0) {
+		shell_info(shell, "parameter `--oneline` is deprecated.");
+	}
 
-	JSON_DICT("SIDEWALK_CLI", in_line, {
-		JSON_VAL_STR("state", state, JSON_NEXT);
-		JSON_VAL("registered",
-			 (CLI_status->detail.registration_status == SID_STATUS_REGISTERED),
-			 JSON_NEXT);
-		JSON_VAL("time_synced",
-			 (CLI_status->detail.time_sync_status == SID_STATUS_TIME_SYNCED),
-			 JSON_NEXT);
-		JSON_VAL("link_up", (CLI_status->detail.link_status_mask), JSON_NEXT);
-		JSON_VAL_DICT(
-			"link_modes",
-			{
-				JSON_VAL(
-					"ble",
-					CLI_status->detail.supported_link_modes[SID_LINK_TYPE_1_IDX],
-					JSON_NEXT);
-				JSON_VAL(
-					"fsk",
-					CLI_status->detail.supported_link_modes[SID_LINK_TYPE_2_IDX],
-					JSON_NEXT);
-				JSON_VAL(
-					"lora",
-					CLI_status->detail.supported_link_modes[SID_LINK_TYPE_3_IDX],
-					JSON_LAST);
-			},
-			JSON_NEXT);
-		JSON_VAL("tx_successfull", sidewalk_messages.tx_successfull, JSON_NEXT);
-		JSON_VAL("tx_failed", sidewalk_messages.tx_failed, JSON_NEXT);
-		JSON_VAL("rx_successfull", sidewalk_messages.rx_successfull, JSON_NEXT);
-		JSON_VAL("response_id", sidewalk_messages.resp_id, JSON_LAST);
-	});
+	shell_fprintf(
+		shell, SHELL_NORMAL,
+		JSON_NEW_LINE(JSON_OBJ(JSON_NAME(
+			"SIDEWALK_CLI",
+			JSON_OBJ(JSON_LIST_9(
+				JSON_NAME("state", JSON_STR(state)),
+				JSON_NAME("registered",
+					  JSON_INT(CLI_status->detail.registration_status ==
+						   SID_STATUS_REGISTERED)),
+				JSON_NAME("time_synced",
+					  JSON_INT(CLI_status->detail.time_sync_status ==
+						   SID_STATUS_TIME_SYNCED)),
+				JSON_NAME("link_up", JSON_INT(CLI_status->detail.link_status_mask)),
+				JSON_NAME(
+					"link_modes",
+					JSON_OBJ(JSON_LIST_3(
+						JSON_NAME("ble",
+							  JSON_INT(CLI_status->detail.supported_link_modes
+									   [SID_LINK_TYPE_1_IDX])),
+						JSON_NAME("fsk",
+							  JSON_INT(CLI_status->detail.supported_link_modes
+									   [SID_LINK_TYPE_2_IDX])),
+						JSON_NAME(
+							"lora",
+							JSON_INT(CLI_status->detail.supported_link_modes
+									 [SID_LINK_TYPE_3_IDX]))))),
+				JSON_NAME("tx_successfull",
+					  JSON_INT(sidewalk_messages.tx_successfull)),
+				JSON_NAME("tx_failed", JSON_INT(sidewalk_messages.tx_failed)),
+				JSON_NAME("rx_successfull",
+					  JSON_INT(sidewalk_messages.rx_successfull)),
+				JSON_NAME("response_id", JSON_INT(sidewalk_messages.resp_id))))))));
+
 	return CMD_RETURN_OK;
 }
 
 void cmd_print_version(const struct shell *shell, size_t argc, char **argv)
 {
-	bool in_line = (argc == 2 && strcmp("--oneline", argv[1]) == 0);
+	shell_fprintf(
+		shell, SHELL_NORMAL,
+		JSON_NEW_LINE(JSON_OBJ(JSON_NAME(
+			"COMPONENTS_VERSION",
+			JSON_OBJ(JSON_LIST_3(
+				JSON_NAME("sidewalk_fork_point",
+					  JSON_STR(sidewalk_version_common_commit)),
+				JSON_NAME("build_time", JSON_STR(build_time_stamp)),
+				JSON_NAME("modules",
+					  JSON_OBJ(JSON_LIST_3(
+						  JSON_NAME(sidewalk_version_component_name[0],
+							    JSON_STR(sidewalk_version_component[0])),
+						  JSON_NAME(sidewalk_version_component_name[1],
+							    JSON_STR(sidewalk_version_component[1])),
+						  JSON_NAME(sidewalk_version_component_name[2],
+							    JSON_STR(sidewalk_version_component
+									     [2])))))))))));
 
-	JSON_DICT("COMPONENTS_VERSION", in_line, {
-		JSON_VAL_STR("sidewalk_fork_point", sidewalk_version_common_commit, JSON_NEXT);
-		JSON_VAL_STR("build_time", build_time_stamp, JSON_NEXT);
-		JSON_VAL_DICT(
-			"modules",
-			{
-				JSON_VAL_STR_ENUMERATE(sidewalk_version_component_name,
-						       sidewalk_version_component,
-						       sidewalk_version_component_count, JSON_LAST);
-			},
-			JSON_LAST);
-	});
+	if (argc == 2 && strcmp("--oneline", argv[1]) == 0) {
+		shell_info(shell, "parameter `--oneline` is deprecated.");
+	}
 }
 
 static void cmd_fatory_reset_work(struct k_work *item)
@@ -444,6 +471,134 @@ static int cmd_factory_reset(const struct shell *shell, size_t argc, char **argv
 	return CMD_RETURN_OK;
 }
 
+static void cmd_stop_work(struct k_work *item)
+{
+	struct sid_factory_reset_t *sid_factory_reset_work = CONTAINER_OF(item, struct sid_factory_reset_t, work);
+	sid_error_t ret = sid_stop(sidewalk_handle, sidewalk_config->link_mask);
+	if (SID_ERROR_NONE != ret) {
+		shell_error(sid_factory_reset_work->shell, "sidewalk cli: sid stop fail %d", ret);
+	} else {
+		shell_info(sid_factory_reset_work->shell, "sidewalk cli: sid stop");
+	}
+}
+
+static void cmd_start_work(struct k_work *item)
+{
+	struct sid_factory_reset_t *sid_factory_reset_work = CONTAINER_OF(item, struct sid_factory_reset_t, work);
+	sid_error_t ret = sid_start(sidewalk_handle, sidewalk_config->link_mask);
+	if (SID_ERROR_NONE != ret) {
+        char str[16];
+        if (SID_ERROR_INVALID_ARGS == ret)
+            strncpy(str, "invalid args", sizeof(str));
+        else
+            sprintf(str, "%d", ret);
+		shell_error(sid_factory_reset_work->shell, "sidewalk cli: sid start fail %s", str);
+	} else {
+		shell_info(sid_factory_reset_work->shell, "sidewalk cli: sid start");
+	}
+}
+
+static void cmd_deinit_work(struct k_work *item)
+{
+	struct sid_factory_reset_t *sid_factory_reset_work = CONTAINER_OF(item, struct sid_factory_reset_t, work);
+	sid_error_t ret = sid_deinit(sidewalk_handle);
+	if (SID_ERROR_NONE != ret) {
+		shell_error(sid_factory_reset_work->shell, "sidewalk cli: sid deinit fail %d", ret);
+	} else {
+		shell_info(sid_factory_reset_work->shell, "sidewalk cli: sid deinit");
+	}
+}
+
+static void cmd_gettime_work(struct k_work *item)
+{
+	struct sid_timespec curr_time;
+	struct sid_factory_reset_t *sid_factory_reset_work = CONTAINER_OF(item, struct sid_factory_reset_t, work);
+	sid_error_t ret = sid_get_time(sidewalk_handle, SID_GET_GPS_TIME, &curr_time);
+	if (SID_ERROR_NONE != ret) {
+		shell_error(sid_factory_reset_work->shell, "sidewalk cli: sid_get_time fail %d", ret);
+	} else {
+		shell_info(sid_factory_reset_work->shell, "sid time %u.%u", curr_time.tv_sec, curr_time.tv_nsec);
+	}
+}
+
+static int cmd_deinit(const struct shell *shell, size_t argc, char **argv)
+{
+	if (k_work_busy_get(&factory_reset_work.work) != 0) {
+		shell_error(
+			shell,
+			"Can not execute deinit command, previous command has not completed yet");
+		return CMD_RETURN_NOT_EXECUTED;
+	}
+
+	factory_reset_work.shell = shell;
+	k_work_init(&factory_reset_work.work, cmd_deinit_work);
+	k_work_submit_to_queue(&sid_api_work_q, &factory_reset_work.work);
+	return CMD_RETURN_OK;
+}
+
+static int cmd_init(const struct shell *shell, size_t argc, char **argv)
+{
+    app_event_send_sid_init();
+	return CMD_RETURN_OK;
+}
+
+static int cmd_stop(const struct shell *shell, size_t argc, char **argv)
+{
+	if (k_work_busy_get(&factory_reset_work.work) != 0) {
+		shell_error(
+			shell,
+			"Can not execute stop command, previous command has not completed yet");
+		return CMD_RETURN_NOT_EXECUTED;
+	}
+
+	factory_reset_work.shell = shell;
+	k_work_init(&factory_reset_work.work, cmd_stop_work);
+	k_work_submit_to_queue(&sid_api_work_q, &factory_reset_work.work);
+	return CMD_RETURN_OK;
+}
+
+static int cmd_start(const struct shell *shell, size_t argc, char **argv)
+{
+	if (k_work_busy_get(&factory_reset_work.work) != 0) {
+		shell_error(
+			shell,
+			"Can not execute start command, previous command has not completed yet");
+		return CMD_RETURN_NOT_EXECUTED;
+	}
+
+	factory_reset_work.shell = shell;
+	k_work_init(&factory_reset_work.work, cmd_start_work);
+	k_work_submit_to_queue(&sid_api_work_q, &factory_reset_work.work);
+	return CMD_RETURN_OK;
+}
+
+static int cmd_sid_get_time(const struct shell *shell, size_t argc, char **argv)
+{
+	if (k_work_busy_get(&factory_reset_work.work) != 0) {
+		shell_error(
+			shell,
+			"Can not execute deinit command, previous command has not completed yet");
+		return CMD_RETURN_NOT_EXECUTED;
+	}
+
+	factory_reset_work.shell = shell;
+	k_work_init(&factory_reset_work.work, cmd_gettime_work);
+	k_work_submit_to_queue(&sid_api_work_q, &factory_reset_work.work);
+	return CMD_RETURN_OK;
+}
+
+static int cmd_sid_sleep(const struct shell *shell, size_t argc, char **argv)
+{
+    app_event_send_sleep();
+	return CMD_RETURN_OK;
+}
+
+static int cmd_sid_standby(const struct shell *shell, size_t argc, char **argv)
+{
+    app_event_send_standby();
+	return CMD_RETURN_OK;
+}
+
 SHELL_STATIC_SUBCMD_SET_CREATE(
 	sub_button, SHELL_CMD_ARG(short, NULL, "{1,2,3,4}", cmd_button_press_short, 2, 0),
 	SHELL_CMD_ARG(long, NULL, "{1,2,3,4}", cmd_button_press_long, 2, 0), SHELL_SUBCMD_SET_END);
@@ -463,6 +618,13 @@ SHELL_STATIC_SUBCMD_SET_CREATE(
 		      cmd_print_version, 1, 1),
 	SHELL_CMD(factory_reset, NULL, "perform factory reset of Sidewalk application",
 		  cmd_factory_reset),
+	SHELL_CMD(deinit, NULL, "deinit sidewalk", cmd_deinit),
+	SHELL_CMD(init, NULL, "init sidewalk", cmd_init),
+	SHELL_CMD(stop, NULL, "deinit sidewalk", cmd_stop),
+	SHELL_CMD(start, NULL, "start sidewalk", cmd_start),
+	SHELL_CMD(time, NULL, "get sidewalk time", cmd_sid_get_time),
+	SHELL_CMD(sleep, NULL, "radio sleep", cmd_sid_sleep),
+	SHELL_CMD(stby, NULL, "radio standby", cmd_sid_standby),
 	SHELL_SUBCMD_SET_END);
 
 // command, subcommands, help, handler

@@ -63,7 +63,11 @@ sid_error_t application_pal_init(void)
 	}
 
 #if defined(CONFIG_SIDEWALK_SUBGHZ)
-	set_radio_sx126x_device_config(get_radio_cfg());
+#ifdef LR11xx
+    set_radio_lr11xx_device_config(get_radio_cfg());
+#else
+    set_radio_sx126x_device_config(get_radio_cfg());
+#endif
 #if defined(CONFIG_SOC_SERIES_NRF53X)
 	(void)bt_enable(NULL);
 	(void)bt_disable();

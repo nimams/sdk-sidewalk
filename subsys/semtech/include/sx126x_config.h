@@ -108,6 +108,10 @@ typedef struct {
     uint32_t gpio_radio_busy;
     uint32_t gpio_rf_sw_ena;
     uint32_t gpio_tx_bypass;
+#ifdef SX126x
+    uint32_t gpio_led_tx;
+    uint32_t gpio_led_rx;
+#endif
 
     struct sid_pal_serial_bus_client bus_selector;
     radio_sx126x_tcxo_t tcxo;
