@@ -61,6 +61,11 @@ config SIDEWALK_CLI
 	bool "Enable sidewalk CLI"
 	imply SHELL
 
+# CLI
+config LR1110_CLI
+	bool "Enable LR1110 CLI"
+	imply SHELL
+
 # Log
 config SIDEWALK_LOG_MSG_LENGTH_MAX
 	int "Log message max length"
