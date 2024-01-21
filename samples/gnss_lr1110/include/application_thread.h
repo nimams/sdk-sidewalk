@@ -53,6 +53,8 @@ typedef enum application_events {
 	EVENT_GNSS_SCAN_SEND,
    EVENT_WIFI_SCAN_START,
    EVENT_WIFI_SCAN_SEND,
+   EVENT_TOGGLE_SID_CUSTOM,
+   EVENT_TOGGLE_GNSS_SCAN_CUSTOM
 } app_event_t;
 
 /**

@@ -51,4 +51,15 @@ void button_event_get_profile(app_ctx_t *application_ctx);
  */
 void button_event_set_ptofile(app_ctx_t *application_ctx);
 
+/**
+ * @brief Manual start and stop of sidewalk
+ *
+ * @note Custom function added
+ *
+ * @param application_ctx
+ */
+void button_stop_sidewalk_custom (app_ctx_t *application_ctx);
+void button_start_sidewalk_custom (app_ctx_t *application_ctx);
+int gnss_scan_timer_custom_set(unsigned sec);
+
 #endif /* BOARD_EVENTS_H */

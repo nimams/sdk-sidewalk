@@ -52,7 +52,8 @@ void *wifi_scan_done_context = &app_context;
 
 static void scan_timer_cb(struct k_timer *timer_id)
 {
-	app_event_send(EVENT_GNSS_SCAN_START);
+	// app_event_send(EVENT_GNSS_SCAN_START);
+   // @todo add routine task, such as sidewalk report
 }
 
 unsigned gnss_scan_timer_get()
@@ -64,8 +65,9 @@ int gnss_scan_timer_set(unsigned sec)
 {
 	if (sec == 0) {
 		k_timer_stop(&scan_timer);
-		LOG_INF("timer stopped");
+		LOG_WRN("timer stopped doing NOTHING");
 	} else {
+      LOG_WRN("timer started doing NOTHING");
 		k_timer_start(&scan_timer, Z_TIMEOUT_NO_WAIT, K_SECONDS(sec));
 	}
 	return 0;
@@ -78,12 +80,15 @@ static void button_handler(uint32_t event)
 
 static sid_error_t app_buttons_init(btn_handler_t handler)
 {
-	button_set_action_long_press(DK_BTN1, handler, BUTTON_EVENT_FACTORY_RESET);
+	// button_set_action_long_press(DK_BTN1, handler, BUTTON_EVENT_FACTORY_RESET);
 	button_set_action_short_press(DK_BTN2, handler, BUTTON_EVENT_GET_DEVICE_PROFILE);
-	button_set_action_long_press(DK_BTN2, handler, BUTTON_EVENT_SET_DEVICE_PROFILE);
-	button_set_action(DK_BTN3, handler, BUTTON_EVENT_SEND_HELLO);
+	// button_set_action_long_press(DK_BTN2, handler, BUTTON_EVENT_SET_DEVICE_PROFILE);
+   button_set_action_long_press(DK_BTN2, handler, EVENT_WIFI_SCAN_START);
+   button_set_action_short_press(DK_BTN4, handler, EVENT_TOGGLE_SID_CUSTOM);
+   button_set_action_short_press(DK_BTN3, handler, EVENT_TOGGLE_GNSS_SCAN_CUSTOM);
+	// button_set_action(DK_BTN3, handler, BUTTON_EVENT_SEND_HELLO);
 #if defined(CONFIG_SIDEWALK_DFU_SERVICE_BLE)
-	button_set_action_long_press(DK_BTN4, handler, BUTTON_EVENT_NORDIC_DFU);
+	// button_set_action_long_press(DK_BTN4, handler, BUTTON_EVENT_NORDIC_DFU);
 #endif
 
 	return buttons_init() ? SID_ERROR_GENERIC : SID_ERROR_NONE;

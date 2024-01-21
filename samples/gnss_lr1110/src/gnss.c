@@ -134,6 +134,10 @@ LOG_MODULE_REGISTER(app_gnss, CONFIG_SIDEWALK_LOG_LEVEL);
 
 static int smtc_wifi_get_results(void *drv_ctx, wifi_scan_all_result_t* wifi_results);
 
+// @todo move this to proper location.
+#define LOCATION_PIN DT_ALIAS(locationreadyled)
+static const struct gpio_dt_spec locationLED = GPIO_DT_SPEC_GET(LOCATION_PIN, gpios);
+static bool _once_on_gnss_scan_done = false;
 void on_gnss_scan_done(void *arg)
 {
 	app_ctx_t *app_ctx = arg;
@@ -157,6 +161,24 @@ void on_gnss_scan_done(void *arg)
 		LOG_ERR("result too big %d > %d", gnss_result.length, GNSS_RESULT_SIZE);
 		return;
 	}
+
+   // remove this later.
+   if (_once_on_gnss_scan_done == false) {
+      int err = 1;
+      if (!device_is_ready(locationLED.port)) {
+         LOG_ERR("Didn't find ant device referred by the LOCATION_PIN");
+      }
+      err = gpio_pin_configure_dt(&locationLED, GPIO_OUTPUT);
+      if (err) {
+         LOG_ERR("Couldn't configure the LOCATION_PIN");
+      }
+      err = gpio_pin_set_dt(&locationLED, 1);
+      if (err) {
+         LOG_ERR("Couldn't set the LOCATION_PIN");
+      } else {
+         _once_on_gnss_scan_done = true;
+      }
+   }
 
 	status = lr11xx_gnss_read_results(drv_ctx, gnss_result.buffer, gnss_result.length);
 	if (status != LR11XX_STATUS_OK) {
@@ -193,12 +215,21 @@ void on_gnss_scan_done(void *arg)
 		app_ctx->frag.buffer = gnss_result.buffer;
 		app_ctx->frag.frag_type = FRAGMENT_TYPE_GNSS;
 		app_event_send(EVENT_GNSS_SCAN_SEND);
+      // remove this later.
+      if (_once_on_gnss_scan_done == true){
+         int err = 1;
+         err = gpio_pin_toggle_dt(&locationLED);
+         if (err) {
+            LOG_ERR("Couldn't toggle LOCATION LED");
+         }
+      }
 	}
 }
 
-#define ANT_PIN DT_ALIAS(gnssantenna)
-static const struct gpio_dt_spec antenna = GPIO_DT_SPEC_GET(ANT_PIN, gpios);
-static bool once = false;
+// @todo move this to proper location.
+#define LOOP_PIN DT_ALIAS(looptimerled)
+static const struct gpio_dt_spec loopLED = GPIO_DT_SPEC_GET(LOOP_PIN, gpios);
+static bool _once_start_gnss_scan = false;
 void start_gnss_scan(app_ctx_t *app_ctx)
 {
    
@@ -209,51 +240,29 @@ void start_gnss_scan(app_ctx_t *app_ctx)
 		return;
 	}
 
-   // gpio_port_pins_t map;
-   // gpio_port_pins_t inputs;
-   // gpio_port_pins_t outputs;
-
-   // struct gpio_dt_spec* antennaPtr = &antenna;
-
    // remove this later.
-   if (once == false) {
+   if (_once_start_gnss_scan == false) {
       int err = 1;
-      if (!device_is_ready(antenna.port)) {
+      if (!device_is_ready(loopLED.port)) {
          LOG_ERR("Didn't find ant device referred by the ANT_PIN");
-         return;
       }
-      err = gpio_pin_configure_dt(&antenna, GPIO_OUTPUT);
+      err = gpio_pin_configure_dt(&loopLED, GPIO_OUTPUT);
       if (err) {
-         LOG_ERR("Couldn't configure the ANT_PIN");
-         return;
+         LOG_ERR("Couldn't configure the LOOP_PIN");
       }
-      err = gpio_pin_set_dt(&antenna, 1);
+      err = gpio_pin_set_dt(&loopLED, 1);
       if (err) {
-         LOG_ERR("Couldn't set the ANT_PIN");
+         LOG_ERR("Couldn't set the LOOP_PIN");
+      } else {
+         _once_start_gnss_scan = true;
+      }
+   } else {
+      int err = 1;
+      err = gpio_pin_toggle_dt(&loopLED);
+      if (err) {
+         LOG_ERR("Couldn't toggle LOOP LED");
          return;
       }
-
-   // if (gpio_pin_is_output(antennaPtr->port, antennaPtr->pin) != 1) {
-   //    LOG_ERR("Couldn't get direction of the ANT_PIN");
-   //    return;
-   // }
-
-   // if (((gpio_port_pins_t)BIT(antennaPtr->pin) & outputs) == 0U) {
-   //    LOG_ERR("ANT_PIN is not an input");
-   //    return;
-   // }
-
-   // if (gpio_pin_get_dt(antennaPtr) == 0) {
-   //    LOG_WRN("ANT_PIN is low, set it high");
-   //    gpio_pin_configure_dt(antennaPtr, GPIO_OUTPUT);
-   //    gpio_pin_configure_dt(antennaPtr, GPIO_OUTPUT_HIGH);
-   //    // gpio_pin_set_dt(antennaPtr, 1);
-   //    if (gpio_pin_get_dt(antennaPtr) == 0) {
-   //       LOG_ERR("ANT_PIN is still low");
-   //       return;
-   //    }
-   // }
-      once = true;
    }
 
 	sid_error_t ret = sid_get_time(app_ctx->handle, SID_GET_GPS_TIME, &curr_time);

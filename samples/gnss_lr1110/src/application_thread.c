@@ -24,6 +24,9 @@
 #include <almanac_update.h>
 #endif /* ALMANAC_UPDATE */
 
+static void button_event_toggle_sid_custom(app_ctx_t *application_ctx);
+static void button_event_toggle_gnss_scan_custom(app_ctx_t *application_ctx);
+
 static struct k_thread application_thread;
 
 K_THREAD_STACK_DEFINE(application_thread_stack, CONFIG_SIDEWALK_THREAD_STACK_SIZE);
@@ -113,6 +116,12 @@ static void sidewalk_app_entry(void *ctx, void *unused, void *unused2)
          case EVENT_WIFI_SCAN_SEND:
             send_scan_result(application_ctx);
             break;
+         case EVENT_TOGGLE_SID_CUSTOM:
+            button_event_toggle_sid_custom(application_ctx);
+            break;
+         case EVENT_TOGGLE_GNSS_SCAN_CUSTOM:
+            button_event_toggle_gnss_scan_custom(application_ctx);
+            break;
 
 #if defined(CONFIG_SIDEWALK_DFU_SERVICE_BLE)
 			case BUTTON_EVENT_NORDIC_DFU:
@@ -126,6 +135,83 @@ static void sidewalk_app_entry(void *ctx, void *unused, void *unused2)
 		}
 	}
 	application_state_working(&global_state_notifier, false);
+}
+
+static void button_event_toggle_sid_custom(app_ctx_t *application_ctx)
+{
+   struct sid_status status = { .state = SID_STATE_NOT_READY };
+	sid_error_t err;
+   bool sidewalk_ready;
+
+   err = sid_get_status(application_ctx->handle, &status);
+	switch (err) {
+      case SID_ERROR_NONE:
+         break;
+      case SID_ERROR_INVALID_ARGS:
+         LOG_ERR("Sidewalk library is not initialzied!");
+         return;
+      default:
+         LOG_ERR("Unknown error during sid_get_status() -> %d", err);
+         return;
+	}
+
+	if (status.state != SID_STATE_READY &&
+      status.state != SID_STATE_NOT_READY) {
+		LOG_ERR("Sidewalk Status is invalid!, got %d",
+			status.state);
+		return;
+	}
+
+   if (status.state == SID_STATE_READY) {
+      sidewalk_ready = true;
+   } else {
+      sidewalk_ready = false;
+   }
+
+   if (!sidewalk_ready) {
+      LOG_INF("starting Sidewalk");
+      button_start_sidewalk_custom(application_ctx);
+   } else {
+      LOG_INF("stopping Sidewalk");
+      button_stop_sidewalk_custom(application_ctx);
+   }
+}
+
+void button_event_toggle_gnss_scan_custom(app_ctx_t *application_ctx)
+{
+   struct sid_status status = { .state = SID_STATE_NOT_READY };
+   sid_error_t err;
+   static bool started = false;
+
+   err = sid_get_status(application_ctx->handle, &status);
+   switch (err) {
+      case SID_ERROR_NONE:
+         break;
+      case SID_ERROR_INVALID_ARGS:
+         LOG_ERR("Sidewalk library is not initialzied!");
+         return;
+      default:
+         LOG_ERR("Unknown error during sid_get_status() -> %d", err);
+         return;
+   }
+
+   if (status.state != SID_STATE_READY) {
+      LOG_ERR("Sidewalk Status is not ready!, got %d",
+         status.state);
+      gnss_scan_timer_custom_set(0);
+      started = false;
+      return;
+   }
+
+   if (!started) {
+      LOG_INF("starting GNSS scan");
+      gnss_scan_timer_custom_set(30);
+      started = true;
+   } else {
+      LOG_INF("stopping GNSS scan");
+      gnss_scan_timer_custom_set(0);
+      started = false;
+   }
 }
 
 void app_event_send(app_event_t event)

@@ -34,13 +34,21 @@
 		   gpios = <&gpio1 0x5 GPIO_ACTIVE_HIGH>;
 		   label = "semtech_sx1262 Busy";
 	   };
-	   semtech_sx1262_antenna_enable_gpios: antena_disabled {
+	   semtech_sx1262_antenna_enable_gpios: antenna {
 		   gpios = <&gpio0 0x07 GPIO_ACTIVE_HIGH>;
-		   label = "semtech_sx1262 Antena disabled";
+		   label = "semtech_sx1262 Antenna disabled";
 	   };
-      semtech_sx1262_antenna_real_gpios: antena_enable {
+      semtech_sx1262_redled_gpios: red_led {
 		   gpios = <&gpio0 0x19 GPIO_ACTIVE_HIGH>;
-		   label = "semtech_sx1262 Antena Enable";
+		   label = "semtech_sx1262 Red LED";
+	   };
+      semtech_sx1262_xxxled_gpios: xxx_led {
+		   gpios = <&gpio0 0x1A GPIO_ACTIVE_HIGH>;
+		   label = "semtech_sx1262 xxx LED";
+	   };
+      semtech_sx1262_yyyled_gpios: yyy_led {
+		   gpios = <&gpio1 0x6 GPIO_ACTIVE_HIGH>;
+		   label = "semtech_sx1262 yyy LED";
 	   };
 	   semtech_sx1262_dio1_gpios: dio1 {
 		   gpios = <&gpio1 0x7 GPIO_ACTIVE_HIGH>;
@@ -57,7 +65,9 @@
 	};
 
    aliases {
-      gnssantenna = &semtech_sx1262_antenna_real_gpios;
+      looptimerled = &semtech_sx1262_redled_gpios;
+      locationreadyled = &semtech_sx1262_xxxled_gpios;
+      uplinkled = &semtech_sx1262_yyyled_gpios;
    };
 };
 

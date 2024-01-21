@@ -42,6 +42,7 @@ static struct sid_device_profile profile_fast = {
 static struct sid_device_profile profile_from_dev = { .unicast_params.device_profile_id =
 							      SID_LINK2_PROFILE_1 };
 #elif defined(CONFIG_SIDEWALK_LINK_MASK_LORA)
+#error "CONFIG_SIDEWALK_LINK_MASK_LORA is not supported"
 static struct sid_device_profile profile_light = {
 	.unicast_params.device_profile_id = SID_LINK3_PROFILE_A,
 	.unicast_params.rx_window_count = SID_RX_WINDOW_CNT_2,
@@ -61,6 +62,33 @@ static struct sid_device_profile profile_fast = {
 static struct sid_device_profile profile_from_dev = { .unicast_params.device_profile_id =
 							      SID_LINK3_PROFILE_A };
 #endif
+
+
+
+static void scan_timer_custom_cb(struct k_timer *);
+K_TIMER_DEFINE(scan_timer_custom, scan_timer_custom_cb, NULL);
+
+static void scan_timer_custom_cb(struct k_timer *timer_id)
+{
+	app_event_send(EVENT_GNSS_SCAN_START);
+}
+
+unsigned gnss_scan_timer_custom_get()
+{
+	return k_ticks_to_ms_floor32(scan_timer_custom.period.ticks) / MSEC_PER_SEC;
+}
+
+int gnss_scan_timer_custom_set(unsigned sec)
+{
+	if (sec == 0) {
+		k_timer_stop(&scan_timer_custom);
+		LOG_INF("timer custom stopped");
+	} else {
+      LOG_INF("timer custom started");
+		k_timer_start(&scan_timer_custom, Z_TIMEOUT_NO_WAIT, K_SECONDS(sec));
+	}
+	return 0;
+}
 
 void button_event_send_hello(app_ctx_t *application_ctx)
 {
@@ -179,6 +207,27 @@ void button_event_get_profile(app_ctx_t *application_ctx)
 		profile_from_dev.unicast_params.unicast_window_interval.async_rx_interval_ms,
 		profile_from_dev.unicast_params.wakeup_type);
 }
+
+void button_stop_sidewalk_custom (app_ctx_t *application_ctx)
+{
+   sid_error_t ret = sid_stop(application_ctx->handle, application_ctx->config.link_mask);
+   if (!ret) {
+		LOG_INF("stop_sidewalk_custom set.");
+	} else {
+		LOG_ERR("stop_sidewalk_custom failed (err %d)", ret);
+	}
+}
+
+void button_start_sidewalk_custom (app_ctx_t *application_ctx)
+{
+   sid_error_t ret = sid_start(application_ctx->handle, application_ctx->config.link_mask);
+   if (!ret) {
+		LOG_INF("start_sidewalk_custom set.");
+	} else {
+		LOG_ERR("start_sidewalk_custom failed (err %d)", ret);
+	}
+}
+
 
 void button_event_set_ptofile(app_ctx_t *application_ctx)
 {

@@ -36,6 +36,7 @@
 #include <string.h>
 #include <state_notifier.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/drivers/gpio.h>
 
 LOG_MODULE_REGISTER(fragment, CONFIG_SIDEWALK_LOG_LEVEL);
 
@@ -89,9 +90,31 @@ void send_scan_result(void *context)
 	}
 }
 
+// @todo move this to proper location.
+#define UPLINK_PIN DT_ALIAS(uplinkled)
+static const struct gpio_dt_spec uplinkLED = GPIO_DT_SPEC_GET(UPLINK_PIN, gpios);
+static bool _once_fragment_msg_sent = false;
 void fragment_msg_sent(void *context)
 {
 	app_ctx_t *app_ctx = (app_ctx_t *)context;
+
+   // remove this later.
+   if (_once_fragment_msg_sent == false) {
+      int err = 1;
+      if (!device_is_ready(uplinkLED.port)) {
+         LOG_ERR("Didn't find ant device referred by the UPLINK_PIN");
+      }
+      err = gpio_pin_configure_dt(&uplinkLED, GPIO_OUTPUT);
+      if (err) {
+         LOG_ERR("Couldn't configure the UPLINK_PIN");
+      }
+      err = gpio_pin_set_dt(&uplinkLED, 1);
+      if (err) {
+         LOG_ERR("Couldn't set the UPLINK_PIN");
+      } else {
+         _once_fragment_msg_sent = true;
+      }
+   }
 
 	if (app_ctx->frag.total_fragments > 0) {
 		/* done sending gnss fragment */
@@ -102,8 +125,17 @@ void fragment_msg_sent(void *context)
 		} else {
 			if (app_ctx->frag.index != app_ctx->frag.total_bytes)
 				LOG_ERR("incorrect send completion count (%d %d)", app_ctx->frag.index, app_ctx->frag.total_bytes);
-			else
+			else {
 				LOG_INF("done sending fragments (%u %u)", app_ctx->frag.index, app_ctx->frag.total_bytes);
+            // remove this later.
+            if (_once_fragment_msg_sent == true){
+               int err = 1;
+               err = gpio_pin_toggle_dt(&uplinkLED);
+               if (err) {
+                  LOG_ERR("Couldn't toggle UPLINK LED");
+               }
+            }
+         }
 			app_ctx->frag.total_fragments = 0;	// indicate done sending
 			app_ctx->frag.current_fragment = 0;
 		}
