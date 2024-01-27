@@ -26,6 +26,7 @@
 
 static void button_event_toggle_sid_custom(app_ctx_t *application_ctx);
 static void button_event_toggle_gnss_scan_custom(app_ctx_t *application_ctx);
+static void button_event_toggle_wifi_custom(app_ctx_t *application_ctx);
 
 static struct k_thread application_thread;
 
@@ -111,7 +112,8 @@ static void sidewalk_app_entry(void *ctx, void *unused, void *unused2)
 				send_scan_result(application_ctx);
 				break;
          case EVENT_WIFI_SCAN_START:
-            scan_wifi(application_ctx);
+            // scan_wifi(application_ctx);
+            button_event_toggle_wifi_custom(application_ctx);
             break;
          case EVENT_WIFI_SCAN_SEND:
             send_scan_result(application_ctx);
@@ -212,6 +214,38 @@ void button_event_toggle_gnss_scan_custom(app_ctx_t *application_ctx)
       gnss_scan_timer_custom_set(0);
       started = false;
    }
+}
+
+void button_event_toggle_wifi_custom(app_ctx_t *application_ctx)
+{
+   struct sid_status status = { .state = SID_STATE_NOT_READY };
+   sid_error_t err;
+
+   err = sid_get_status(application_ctx->handle, &status);
+   switch (err) {
+      case SID_ERROR_NONE:
+         break;
+      case SID_ERROR_INVALID_ARGS:
+         LOG_ERR("Sidewalk library is not initialzied!");
+         return;
+      default:
+         LOG_ERR("Unknown error during sid_get_status() -> %d", err);
+         return;
+   }
+
+   if (status.state != SID_STATE_READY) {
+      LOG_ERR("Sidewalk Status is not ready!, got %d",
+         status.state);
+      if (application_ctx->frag.total_fragments) {
+         LOG_WRN("Removing previous fragments!");
+         application_ctx->frag.total_fragments = 0;	// indicate done sending
+			application_ctx->frag.current_fragment = 0;
+      }
+      return;
+   }
+
+   LOG_INF("starting Sending wifi");
+   scan_wifi(application_ctx);
 }
 
 void app_event_send(app_event_t event)

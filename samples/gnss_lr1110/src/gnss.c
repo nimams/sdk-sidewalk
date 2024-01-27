@@ -53,7 +53,7 @@ lr11xx_gnss_solver_assistance_position_t assistance_position = { ASSIST_LATITUDE
 
 
 /* often one of the access points received is a mobile-AP, so get the max +1 */
-#define WIFI_MAX_RESULTS ( 2 )
+#define WIFI_MAX_RESULTS ( 10 )
 
 /**
  * @brief Minimal number of detected access point in a scan result to consider the scan valid
