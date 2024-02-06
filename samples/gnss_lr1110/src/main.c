@@ -81,12 +81,14 @@ static void button_handler(uint32_t event)
 static sid_error_t app_buttons_init(btn_handler_t handler)
 {
 	// button_set_action_long_press(DK_BTN1, handler, BUTTON_EVENT_FACTORY_RESET);
-	// button_set_action_short_press(DK_BTN2, handler, BUTTON_EVENT_GET_DEVICE_PROFILE);
+   // button_set_action_short_press(DK_BTN2, handler, BUTTON_EVENT_GET_DEVICE_PROFILE);
+   // button_set_action_long_press(DK_BTN2, handler, BUTTON_EVENT_SET_DEVICE_PROFILE);
+   button_set_action_short_press(DK_BTN1, handler, EVENT_TOGGLE_SID_PROTOCOL_CUSTOM);
+   button_set_action_long_press(DK_BTN1, handler, BUTTON_EVENT_SET_DEVICE_PROFILE);
    button_set_action_short_press(DK_BTN2, handler, EVENT_WIFI_SCAN_START);
-	// button_set_action_long_press(DK_BTN2, handler, BUTTON_EVENT_SET_DEVICE_PROFILE);
    button_set_action_long_press(DK_BTN2, handler, BUTTON_EVENT_GET_DEVICE_PROFILE);
-   button_set_action_short_press(DK_BTN4, handler, EVENT_TOGGLE_SID_CUSTOM);
    button_set_action_short_press(DK_BTN3, handler, EVENT_TOGGLE_GNSS_SCAN_CUSTOM);
+   button_set_action_short_press(DK_BTN4, handler, EVENT_TOGGLE_SID_START_CUSTOM);
 	// button_set_action(DK_BTN3, handler, BUTTON_EVENT_SEND_HELLO);
 #if defined(CONFIG_SIDEWALK_DFU_SERVICE_BLE)
 	// button_set_action_long_press(DK_BTN4, handler, BUTTON_EVENT_NORDIC_DFU);

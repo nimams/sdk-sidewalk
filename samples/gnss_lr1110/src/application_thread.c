@@ -24,7 +24,7 @@
 #include <almanac_update.h>
 #endif /* ALMANAC_UPDATE */
 
-static void button_event_toggle_sid_custom(app_ctx_t *application_ctx);
+static void button_event_toggle_sid_start_custom(app_ctx_t *application_ctx);
 static void button_event_toggle_gnss_scan_custom(app_ctx_t *application_ctx);
 static void button_event_toggle_wifi_custom(app_ctx_t *application_ctx);
 
@@ -118,13 +118,15 @@ static void sidewalk_app_entry(void *ctx, void *unused, void *unused2)
          case EVENT_WIFI_SCAN_SEND:
             send_scan_result(application_ctx);
             break;
-         case EVENT_TOGGLE_SID_CUSTOM:
-            button_event_toggle_sid_custom(application_ctx);
+         case EVENT_TOGGLE_SID_START_CUSTOM:
+            button_event_toggle_sid_start_custom(application_ctx);
             break;
          case EVENT_TOGGLE_GNSS_SCAN_CUSTOM:
             button_event_toggle_gnss_scan_custom(application_ctx);
             break;
-
+         case EVENT_TOGGLE_SID_PROTOCOL_CUSTOM:
+            change_protocol_sidewalk_custom(application_ctx);
+            break;
 #if defined(CONFIG_SIDEWALK_DFU_SERVICE_BLE)
 			case BUTTON_EVENT_NORDIC_DFU:
 				button_event_DFU(application_ctx);
@@ -139,7 +141,7 @@ static void sidewalk_app_entry(void *ctx, void *unused, void *unused2)
 	application_state_working(&global_state_notifier, false);
 }
 
-static void button_event_toggle_sid_custom(app_ctx_t *application_ctx)
+static void button_event_toggle_sid_start_custom(app_ctx_t *application_ctx)
 {
    struct sid_status status = { .state = SID_STATE_NOT_READY };
 	sid_error_t err;
@@ -198,11 +200,38 @@ void button_event_toggle_gnss_scan_custom(app_ctx_t *application_ctx)
    }
 
    if (status.state != SID_STATE_READY) {
+      if (application_ctx->frag.total_fragments) {
+         LOG_WRN("Removing previous fragments!");
+         application_ctx->frag.total_fragments = 0;	// indicate done sending
+			application_ctx->frag.current_fragment = 0;
+      }
+   }
+   if ((SID_LINK_TYPE_1 != application_ctx->config.link_mask) && status.state != SID_STATE_READY) {
       LOG_ERR("Sidewalk Status is not ready!, got %d",
          status.state);
+      if (application_ctx->frag.total_fragments) {
+         LOG_WRN("Removing previous fragments!");
+         application_ctx->frag.total_fragments = 0;	// indicate done sending
+			application_ctx->frag.current_fragment = 0;
+      }
       gnss_scan_timer_custom_set(0);
       started = false;
       return;
+   } else if (SID_LINK_TYPE_1 == application_ctx->config.link_mask) {
+      if (status.state != SID_STATE_READY) {
+         bool next = !application_ctx->connection_request;
+         LOG_INF("%s connection request", next ? "Set" : "Clear");
+         sid_error_t ret = sid_ble_bcn_connection_request(application_ctx->handle, next);
+
+         if (SID_ERROR_NONE == ret) {
+            application_ctx->connection_request = next;
+         } else {
+            LOG_ERR("Connection request failed %d", ret);
+         }
+         gnss_scan_timer_custom_set(0);
+         started = false;
+         return;
+      }
    }
 
    if (!started) {
@@ -234,14 +263,29 @@ void button_event_toggle_wifi_custom(app_ctx_t *application_ctx)
    }
 
    if (status.state != SID_STATE_READY) {
-      LOG_ERR("Sidewalk Status is not ready!, got %d",
-         status.state);
       if (application_ctx->frag.total_fragments) {
          LOG_WRN("Removing previous fragments!");
          application_ctx->frag.total_fragments = 0;	// indicate done sending
 			application_ctx->frag.current_fragment = 0;
       }
+   }
+   if ((SID_LINK_TYPE_1 != application_ctx->config.link_mask) && (status.state != SID_STATE_READY)) {
+      LOG_ERR("Sidewalk Status is not ready!, got %d",
+         status.state);
       return;
+   } else if (SID_LINK_TYPE_1 == application_ctx->config.link_mask) {
+      if (status.state != SID_STATE_READY) {
+         bool next = !application_ctx->connection_request;
+         LOG_INF("%s connection request", next ? "Set" : "Clear");
+         sid_error_t ret = sid_ble_bcn_connection_request(application_ctx->handle, next);
+
+         if (SID_ERROR_NONE == ret) {
+            application_ctx->connection_request = next;
+         } else {
+            LOG_ERR("Connection request failed %d", ret);
+         }
+         return;
+      }
    }
 
    LOG_INF("starting Sending wifi");

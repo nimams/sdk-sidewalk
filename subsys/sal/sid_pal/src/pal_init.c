@@ -70,7 +70,8 @@ sid_error_t application_pal_init(void)
 #endif
 #if defined(CONFIG_SOC_SERIES_NRF53X)
 	(void)bt_enable(NULL);
-	(void)bt_disable();
+   // @todo this is for power saving, disabled now.
+	// (void)bt_disable();
 #endif /* defined(CONFIG_SOC_SERIES_NRF53X) */
 #endif /* defined(CONFIG_SIDEWALK_SUBGHZ) */
 

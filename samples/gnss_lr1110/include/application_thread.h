@@ -20,6 +20,21 @@
 #error "Not defined Sidewalk link mask!!"
 #endif
 
+/**
+ * @brief Support custom code for multiple link mask
+ *
+ * @todo try multiple link mask
+ */
+#define CUSTOM_CODE
+
+#if defined(CUSTOM_CODE)
+#define OPT_LINK_BLE 1
+#define OPT_LINK_FSK 2
+#define OPT_LINK_LORA 3
+#define OPT_LINK_LORA_BLE 4
+#define OPT_LINK_FSK_BLE 5
+#endif /* CUSTOM_CODE */
+
 #define NB_MAX_SV		8	/* GNSS */
 #define DEFAULT_AUTO_SCAN_INTERVAL		30		/* seconds */
 
@@ -53,7 +68,8 @@ typedef enum application_events {
 	EVENT_GNSS_SCAN_SEND,
    EVENT_WIFI_SCAN_START,
    EVENT_WIFI_SCAN_SEND,
-   EVENT_TOGGLE_SID_CUSTOM,
+   EVENT_TOGGLE_SID_START_CUSTOM,
+   EVENT_TOGGLE_SID_PROTOCOL_CUSTOM,
    EVENT_TOGGLE_GNSS_SCAN_CUSTOM
 } app_event_t;
 
