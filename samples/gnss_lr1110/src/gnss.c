@@ -138,11 +138,13 @@ static int smtc_wifi_get_results(void *drv_ctx, wifi_scan_all_result_t* wifi_res
 #define LOCATION_PIN DT_ALIAS(locationreadyled)
 static const struct gpio_dt_spec locationLED = GPIO_DT_SPEC_GET(LOCATION_PIN, gpios);
 static bool _once_on_gnss_scan_done = false;
+static bool tried_once = false;
 void on_gnss_scan_done(void *arg)
 {
 	app_ctx_t *app_ctx = arg;
 	uint8_t n_sv_detected = 0;
 	void *drv_ctx = lr11xx_get_drv_ctx();
+
 
 	if (app_ctx == NULL) {
 		LOG_ERR("on_gnss_scan_done no context");
@@ -201,9 +203,23 @@ void on_gnss_scan_done(void *arg)
 #endif /* GNSS_DEBUG */
 
 	if (app_ctx->frag.total_fragments > 0) {
+
 		LOG_WRN("already sending scan-result");
-		return;
+      if (tried_once) {
+         if (SID_LINK_TYPE_1 == app_ctx->config.link_mask) {
+            LOG_WRN("cancel already sending result");
+            app_ctx->frag.total_fragments = 0;
+         }
+      }
+      if (!tried_once && SID_LINK_TYPE_1 == app_ctx->config.link_mask) {
+         tried_once = true;
+         return;
+      }
+      if (SID_LINK_TYPE_1 != app_ctx->config.link_mask) {
+         return;
+      }
 	}
+   tried_once = false;
 
 	if (n_sv_detected > 4) {
 		uint8_t length = gnss_result.length - 1;
@@ -337,9 +353,23 @@ static int wifi_mw_send_results(app_ctx_t *app_ctx)
 	LOG_INF("size wifi_result_buffer %u", sizeof(wifi_result_buffer));
 
 	if (app_ctx->frag.total_fragments > 0) {
-		LOG_WRN("already sending scan-result");
-		return -1;
+
+      LOG_WRN("already sending scan-result");
+      if (tried_once) {
+         if (SID_LINK_TYPE_1 == app_ctx->config.link_mask) {
+            LOG_WRN("cancel already sending result");
+            app_ctx->frag.total_fragments = 0;
+         }
+      }
+      if (!tried_once && SID_LINK_TYPE_1 == app_ctx->config.link_mask) {
+         tried_once = true;
+         return -1;
+      }
+      if (SID_LINK_TYPE_1 != app_ctx->config.link_mask) {
+         return -1;
+      }
 	}
+   tried_once = false;
 
 	/* Add the payload format tag */
 	wifi_result_buffer[wifi_buffer_size] = payload_format;

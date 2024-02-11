@@ -94,7 +94,22 @@ K_TIMER_DEFINE(scan_timer_custom, scan_timer_custom_cb, NULL);
 
 static void scan_timer_custom_cb(struct k_timer *timer_id)
 {
-	app_event_send(EVENT_GNSS_SCAN_START);
+   app_event_send(EVENT_GNSS_SCAN_START);
+}
+
+static void scan_timer_custom_wifi_gnss_cb(struct k_timer *);
+K_TIMER_DEFINE(scan_timer_custom_wifi_gnss, scan_timer_custom_wifi_gnss_cb, NULL);
+
+static void scan_timer_custom_wifi_gnss_cb(struct k_timer *timer_id)
+{
+   static bool alternate = false;
+   if (!alternate) {
+	   app_event_send(EVENT_GNSS_SCAN_START);
+      alternate = true;
+   } else {
+      app_event_send(EVENT_WIFI_SCAN_START);
+      alternate = false;
+   }
 }
 
 unsigned gnss_scan_timer_custom_get()
@@ -110,6 +125,18 @@ int gnss_scan_timer_custom_set(unsigned sec)
 	} else {
       LOG_INF("timer custom started");
 		k_timer_start(&scan_timer_custom, Z_TIMEOUT_NO_WAIT, K_SECONDS(sec));
+	}
+	return 0;
+}
+
+int gnss_scan_timer_custom_wifi_gnss_set(unsigned sec)
+{
+	if (sec == 0) {
+		k_timer_stop(&scan_timer_custom_wifi_gnss);
+		LOG_INF("timer custom stopped Wifi + GNSS");
+	} else {
+      LOG_INF("timer custom started wifi + GNSS");
+		k_timer_start(&scan_timer_custom_wifi_gnss, Z_TIMEOUT_NO_WAIT, K_SECONDS(sec));
 	}
 	return 0;
 }

@@ -55,6 +55,54 @@ void send_scan_result(void *context)
 	LOG_INF("send_scan_result index:%d total:%d cur_frag:%d mtu=%d", app_ctx->frag.index, app_ctx->frag.total_bytes, app_ctx->frag.current_fragment, app_ctx->frag.mtu);
 #endif /* GNSS_DEBUG */
 
+   if (SID_LINK_TYPE_1 == app_ctx->config.link_mask) {
+      struct sid_status _status = { .state = SID_STATE_NOT_READY };
+      sid_error_t _err;
+      bool break_loop = false;
+      bool next;
+      sid_error_t _ret;
+      uint8_t max_retry = 8;
+      if (app_ctx->connection_request) {
+         app_ctx->connection_request = false;
+      }
+      do {
+         if (max_retry == 0) {
+            LOG_ERR("Failed to try more");
+            return;
+         }
+         max_retry--;
+         _err = sid_get_status(app_ctx->handle, &_status);
+         switch (_err) {
+            case SID_ERROR_NONE:
+               break;
+            case SID_ERROR_INVALID_ARGS:
+               LOG_ERR("Sidewalk library is not initialzied!");
+               break_loop = true;
+               break;
+            default:
+               LOG_ERR("Unknown error during sid_get_status() -> %d", _err);
+               break_loop = true;
+               break;
+         }
+         if (break_loop) {
+            break;
+         }
+         if (_status.state != SID_STATE_READY) {
+            next = !app_ctx->connection_request;
+            LOG_INF("%s connection request", next ? "Set" : "Clear");
+            if (next) {
+               _ret = sid_ble_bcn_connection_request(app_ctx->handle, next);
+               if (SID_ERROR_NONE == _ret) {
+                  app_ctx->connection_request = next;
+               } else {
+                  LOG_ERR("Connection request failed %d", _ret);
+               }
+            }
+            k_sleep(K_SECONDS(2));
+         }
+      } while (_status.state != SID_STATE_READY);
+   }
+
 	if (this_length > byte_per_fragment)
 		this_length = byte_per_fragment;
 

@@ -62,5 +62,6 @@ void button_stop_sidewalk_custom (app_ctx_t *application_ctx);
 void button_start_sidewalk_custom (app_ctx_t *application_ctx);
 void change_protocol_sidewalk_custom (app_ctx_t *application_ctx);
 int gnss_scan_timer_custom_set(unsigned sec);
+int gnss_scan_timer_custom_wifi_gnss_set(unsigned sec);
 
 #endif /* BOARD_EVENTS_H */

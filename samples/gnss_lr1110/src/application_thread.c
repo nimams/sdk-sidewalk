@@ -27,6 +27,7 @@
 static void button_event_toggle_sid_start_custom(app_ctx_t *application_ctx);
 static void button_event_toggle_gnss_scan_custom(app_ctx_t *application_ctx);
 static void button_event_toggle_wifi_custom(app_ctx_t *application_ctx);
+static void button_event_toggle_gnss_wifi_custom(app_ctx_t *application_ctx);
 
 static struct k_thread application_thread;
 
@@ -107,13 +108,14 @@ static void sidewalk_app_entry(void *ctx, void *unused, void *unused2)
 				break;
 			case EVENT_GNSS_SCAN_START:
 				start_gnss_scan(application_ctx);
+            // button_event_toggle_gnss_scan_custom(application_ctx);
 				break;
 			case EVENT_GNSS_SCAN_SEND:
 				send_scan_result(application_ctx);
 				break;
          case EVENT_WIFI_SCAN_START:
-            // scan_wifi(application_ctx);
-            button_event_toggle_wifi_custom(application_ctx);
+            scan_wifi(application_ctx);
+            // button_event_toggle_wifi_custom(application_ctx);
             break;
          case EVENT_WIFI_SCAN_SEND:
             send_scan_result(application_ctx);
@@ -124,8 +126,14 @@ static void sidewalk_app_entry(void *ctx, void *unused, void *unused2)
          case EVENT_TOGGLE_GNSS_SCAN_CUSTOM:
             button_event_toggle_gnss_scan_custom(application_ctx);
             break;
+         case EVENT_TOGGLE_WIFI_SCAN_CUSTOM:
+            button_event_toggle_wifi_custom(application_ctx);
+            break;
          case EVENT_TOGGLE_SID_PROTOCOL_CUSTOM:
             change_protocol_sidewalk_custom(application_ctx);
+            break;
+         case EVENT_TOGGLE_GNSS_WIFI_SCAN_CUSTOM:
+            button_event_toggle_gnss_wifi_custom(application_ctx);
             break;
 #if defined(CONFIG_SIDEWALK_DFU_SERVICE_BLE)
 			case BUTTON_EVENT_NORDIC_DFU:
@@ -241,6 +249,71 @@ void button_event_toggle_gnss_scan_custom(app_ctx_t *application_ctx)
    } else {
       LOG_INF("stopping GNSS scan");
       gnss_scan_timer_custom_set(0);
+      started = false;
+   }
+}
+
+
+void button_event_toggle_gnss_wifi_custom(app_ctx_t *application_ctx)
+{
+   struct sid_status status = { .state = SID_STATE_NOT_READY };
+   sid_error_t err;
+   static bool started = false;
+
+   err = sid_get_status(application_ctx->handle, &status);
+   switch (err) {
+      case SID_ERROR_NONE:
+         break;
+      case SID_ERROR_INVALID_ARGS:
+         LOG_ERR("Sidewalk library is not initialzied!");
+         return;
+      default:
+         LOG_ERR("Unknown error during sid_get_status() -> %d", err);
+         return;
+   }
+
+   if (status.state != SID_STATE_READY) {
+      if (application_ctx->frag.total_fragments) {
+         LOG_WRN("Removing previous fragments!");
+         application_ctx->frag.total_fragments = 0;	// indicate done sending
+			application_ctx->frag.current_fragment = 0;
+      }
+   }
+   if ((SID_LINK_TYPE_1 != application_ctx->config.link_mask) && status.state != SID_STATE_READY) {
+      LOG_ERR("Sidewalk Status is not ready!, got %d",
+         status.state);
+      if (application_ctx->frag.total_fragments) {
+         LOG_WRN("Removing previous fragments!");
+         application_ctx->frag.total_fragments = 0;	// indicate done sending
+			application_ctx->frag.current_fragment = 0;
+      }
+      gnss_scan_timer_custom_wifi_gnss_set(0);
+      started = false;
+      return;
+   } else if (SID_LINK_TYPE_1 == application_ctx->config.link_mask) {
+      if (status.state != SID_STATE_READY) {
+         bool next = !application_ctx->connection_request;
+         LOG_INF("%s connection request", next ? "Set" : "Clear");
+         sid_error_t ret = sid_ble_bcn_connection_request(application_ctx->handle, next);
+
+         if (SID_ERROR_NONE == ret) {
+            application_ctx->connection_request = next;
+         } else {
+            LOG_ERR("Connection request failed %d", ret);
+         }
+         gnss_scan_timer_custom_wifi_gnss_set(0);
+         started = false;
+         return;
+      }
+   }
+
+   if (!started) {
+      LOG_INF("starting GNSS + wifi scan");
+      gnss_scan_timer_custom_wifi_gnss_set(32);
+      started = true;
+   } else {
+      LOG_INF("stopping GNSS + wifi scan");
+      gnss_scan_timer_custom_wifi_gnss_set(0);
       started = false;
    }
 }
