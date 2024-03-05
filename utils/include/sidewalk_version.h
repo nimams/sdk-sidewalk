@@ -19,7 +19,7 @@ extern const char *const sidewalk_version_component[];
 #if defined(CONFIG_LOG)
 #define PRINT_SIDEWALK_VERSION()                                                                   \
 	LOG_PRINTK("----------------------------------------------------------------\n");          \
-	for (int i = 0; i < sidewalk_version_component_count; i++) {                               \
+	for (uint8_t i = 0; i < sidewalk_version_component_count; i++) {                               \
 		LOG_PRINTK("%-" NAME_COLUMN_WIDTH "s %s\n", sidewalk_version_component_name[i],    \
 			   sidewalk_version_component[i]);                                         \
 	}                                                                                          \

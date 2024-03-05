@@ -69,9 +69,10 @@ sid_error_t application_pal_init(void)
     set_radio_sx126x_device_config(get_radio_cfg());
 #endif
 #if defined(CONFIG_SOC_SERIES_NRF53X)
-	(void)bt_enable(NULL);
+	// @todo issue with main ble thread.
+	// (void)bt_enable(NULL);
    // @todo this is for power saving, disabled now.
-	// (void)bt_disable();
+	(void)bt_disable();
 #endif /* defined(CONFIG_SOC_SERIES_NRF53X) */
 #endif /* defined(CONFIG_SIDEWALK_SUBGHZ) */
 
